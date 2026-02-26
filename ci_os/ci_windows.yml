@@ -36,20 +36,24 @@ jobs:
         run: |
           Write-Host "Début du déploiement local..."
           
-          $DOCKERHUB_USERNAME="${{ secrets.DOCKERHUB_USERNAME }}"
-          $IMAGE_NAME="mon-site-flask"
-          $TAG="latest"
-          $FULL_IMAGE="$DOCKERHUB_USERNAME/$IMAGE_NAME:$TAG"
-          $CONTAINER_NAME="flask-app"
+          $DOCKERHUB_USERNAME = "${{ secrets.DOCKERHUB_USERNAME }}"
+          $IMAGE_NAME = "mon-site-flask"
+          $TAG = "latest"
+          $FULL_IMAGE = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${TAG}"
+          $CONTAINER_NAME = "flask-app"
+          
+          Write-Host "Image à déployer: $FULL_IMAGE"
           
           # Pull latest image
           docker pull $FULL_IMAGE
           
-          # Stop and remove old container
+          # Stop and remove old container (ignore errors if container doesn't exist)
+          Write-Host "Arrêt de l'ancien conteneur (si existant)..."
           docker stop $CONTAINER_NAME 2>$null
           docker rm $CONTAINER_NAME 2>$null
           
           # Run new container
+          Write-Host "Démarrage du nouveau conteneur..."
           docker run -d `
             --name $CONTAINER_NAME `
             --restart unless-stopped `
@@ -61,10 +65,14 @@ jobs:
           # Check if container is running
           Start-Sleep -Seconds 5
           if (docker ps | Select-String $CONTAINER_NAME) {
-            Write-Host "Conteneur démarré avec succès"
-          } else {
-            Write-Host "Échec du démarrage du conteneur"
+            Write-Host "✅ Conteneur démarré avec succès"
+            Write-Host "Application disponible sur http://localhost:5000"
+            
+            # Afficher les logs du conteneur
+            Write-Host "Logs du conteneur :"
             docker logs $CONTAINER_NAME
+          } else {
+            Write-Host "❌ Échec du démarrage du conteneur"
             exit 1
           }
         shell: powershell
